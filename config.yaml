@@ -1,0 +1,30 @@
+secrets:
+  - name: "personal_git_access"
+    manager: bitwarden
+    key: ""
+
+syncs:
+  - name: "sync-test-1"
+    type: git
+    on_failure: exit
+    run_when:
+      dir_changed:
+        events: all
+      timer:
+        interval: 5
+    remotes:
+      origin: ""
+    local: "/home/linuxdev/sync-test"
+    secret: "personal_git_access"
+
+
+  - name: "sync-test"
+    type: rclone
+    on_failure: continue
+    run_when:
+      dir_changed:
+        events: all
+      timer:
+        interval: 5
+    remote: "gdrive-personal:/sync-test"
+    local:  "/home/linuxdev/sync-test"

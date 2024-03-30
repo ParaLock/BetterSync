@@ -1,7 +1,14 @@
+cache:
+  stash_location: "./usync-cache"
+
+initializers:
+  builtin:
+    files_to_host: "./usync-server-data"
+
 secrets:
   - name: "personal_git_access"
-    manager: bitwarden
-    key: ""
+    type: ssh_key
+    manager: usync
 
 syncs:
   - name: "sync-test-1"
@@ -10,9 +17,10 @@ syncs:
     run_when:
       dir_changed:
         events: all
+        debounce_interval: 1
     remotes:
-      origin: ""
-    local: "/home/linuxdev/sync-test"
+      origin: "git@github.com:ParaLock/SyncTest.git"
+    local: "/home/linuxdev/SyncTest"
     secret: "personal_git_access"
 
 

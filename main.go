@@ -1,16 +1,19 @@
 package main
 
 import (
-    "fmt"
-    "io"
-    "os"
-    "os/exec"
-    "time"
-    "github.com/fsnotify/fsnotify"
-    "gopkg.in/yaml.v2"
-    "io/ioutil"
-	"synchronizsers/RClone"
+    // "io"
+    // "os"
+    // "os/exec"
+    // "time"
+    // "github.com/fsnotify/fsnotify"
+    // "gopkg.in/yaml.v2"
+    // "io/ioutil"
+    // "log"
+    // "net"
+    // "net/http"
 )
+
+import "usync/synchronizers"
 
 type Config struct {
     Syncs []SyncConfig `yaml:"syncs"`
@@ -32,104 +35,106 @@ type SyncConfig struct {
     Local  string `yaml:"local"`
 }
 
-func watch(sync SyncConfig, watcher) {
-
-    err := watcher.Add(sync.Local)
-    watcher, err := fsnotify.NewWatcher()
-
-    if err != nil {
-        panic(fmt.Sprintf("error initializing watcher: %v", err))
-    }
-    if err != nil {
-        panic(fmt.Sprintf("error adding directory to watcher: %v", err))
-    }
-    defer watcher.Close()
-
-    go func() {
-        for {
-            select {
-                case event, ok := <-watcher.Events:
-
-                    if !ok {
-                        return
-                    }
-                    fmt.Printf("Event: %s\n", event)
-
-                case err, ok := <-watcher.Errors:
-                    
-                    if !ok {
-                        return
-                    }
-
-                    fmt.Printf("Watcher error: %v\n", err)
-            }
-        }
-    }()
+type BootstrapArgs struct {
     
 }
 
+type Args struct {
+    Mode             string `arg:"positional"`
+	BootstrapMethod  string `arg:"--bootstrap-method"`
+}
+
+// func watch(dir string, allowedEvents []string, watcher fsnotify.Watcher) {
+
+//     err := watcher.Add(sync.Local)
+//     watcher, err := fsnotify.NewWatcher()
+
+//     if err != nil {
+//         panic(fmt.Sprintf("error initializing watcher: %v", err))
+//     }
+//     if err != nil {
+//         panic(fmt.Sprintf("error adding directory to watcher: %v", err))
+//     }
+//     defer watcher.Close()
+
+//     go func() {
+//         for {
+//             select {
+//                 case event, ok := <-watcher.Events:
+
+//                     if !ok {
+//                         return
+//                     }
+//                     fmt.Printf("Event: %s\n", event)
+
+//                 case err, ok := <-watcher.Errors:
+                    
+//                     if !ok {
+//                         return
+//                     }
+
+//                     fmt.Printf("Watcher error: %v\n", err)
+//             }
+//         }
+//     }()
+    
+// }
+
 func main() {
 
-	gitSynchronizer 	:= &synchronizers.Git{}
-    rcloneSynchronizer  := &synchronizers.RClone{}
-
-	config := loadConfig("config.yaml")
+	gitSynchronizer	:= &synchronizers.Git{}
+    gitSynchronizer.Execute()
 
 
-    for _, sync := range config.Syncs {
-        fmt.Printf("Setting up sync: %s\n", sync.Name)
 
-  
 
-        if sync.RunWhen.Timer.Interval > 0 {
-            ticker := time.NewTicker(time.Duration(sync.RunWhen.Timer.Interval) * time.Second)
-            go func() {
-                for range ticker.C {
-                    if err := executeRcloneSync(sync); err != nil {
-                        handleSyncError(sync, err)
-                    }
-                }
-            }()
-        }
-    }
 
-    fmt.Println("Setup complete. Press 'Enter' to exit.")
-    fmt.Scanln()
+	// exePath, err := os.Executable()
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// exeDir := filepath.Dir(exePath)
+	// relativePath := "config/settings.json"
+	// absolutePath := filepath.Join(exeDir, relativePath)
+	// fmt.Printf("Absolute path: %s\n", absolutePath)
+
+
+
+
+
+
+    // rcloneSynchronizer  := &synchronizers.RClone{}
+    // var args Args
+    // arg.MustParse(&args)
+    // fmt.Println("Mode:", args.Mode)
+    // fmt.Println("BootstrapMethod:", args.BootstrapMethod)
+    // var args Args
+    // arg.MustParse(&args)
+
+    // fmt.Println(args.mode)
+    // fmt.Println(args.bootstrapMethod)
+
+	// config := loadConfig("config.yaml")
+
+    // for _, sync := range config.Syncs {
+    //     fmt.Printf("Setting up sync: %s\n", sync.Name)
+    // }
+
+    // fmt.Println("Setup complete. Press 'Enter' to exit.")
+    // fmt.Scanln()
 }
 
-func loadConfig(path string) Config {
-    var config Config
-    data, err := ioutil.ReadFile(path)
-    if err != nil {
-        panic(fmt.Sprintf("cannot read config file: %v", err))
-    }
-    err = yaml.Unmarshal(data, &config)
-    if err != nil {
-        panic(fmt.Sprintf("cannot parse config file: %v", err))
-    }
-    return config
-}
+// func loadConfig(path string) Config {
+//     var config Config
+//     data, err := ioutil.ReadFile(path)
+//     if err != nil {
+//         panic(fmt.Sprintf("cannot read config file: %v", err))
+//     }
+//     err = yaml.Unmarshal(data, &config)
+//     if err != nil {
+//         panic(fmt.Sprintf("cannot parse config file: %v", err))
+//     }
+//     return config
+// }
 
-func executeSync() {
-
-}
-
-func executeRcloneSync(sync SyncConfig) error {
-    fmt.Printf("Executing rclone sync from %s to %s\n", sync.Local, sync.Remote)
-    cmd := exec.Command("rclone", "bisync", sync.Local, sync.Remote)
-    cmd.Stdout = os.Stdout
-    cmd.Stderr = os.Stderr
-    err := cmd.Run()
-    if err != nil {
-        return fmt.Errorf("rclone sync error: %w", err)
-    }
-    fmt.Println("Sync completed successfully")
-    return nil
-}
-
-func handleSyncError(sync SyncConfig, err error) {
-    fmt.Printf("Error during sync '%s': %v\n", sync.Name, err)
-    if sync.OnFailure == "exit" {
-        os.Exit(1)
-    }
-}

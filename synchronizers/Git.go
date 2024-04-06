@@ -5,7 +5,7 @@ import (
     "os"
     "time"
 	git "github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
+	// "github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
     "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 )
@@ -18,24 +18,33 @@ func (m *Git) Execute() {
     
 	repoURL := "git@github.com:ParaLock/SyncTest.git"
 	directory := "/home/linuxdev/SyncTest/"
-	branch := "main"
 	email := "nathanael.mercaldo@gmail.com"
     username := "Paralock"
     sshKeyPath := os.Getenv("HOME") + "/.ssh/id_rsa_personal_github"
+
+    remotes := make(map[string]string)
+	remotes["origin"] = "git@github.com:ParaLock/SyncTest.git"
     
-    var err = asyncGitOperations(
+    
+    var err = executeSync(
         repoURL,
         directory,
-        branch,
         email,
         username,
-        sshKeyPath)
+        sshKeyPath,
+        remotes)
 
     fmt.Println("test123")
     fmt.Println(err)
 }
 
-func asyncGitOperations(repoURL, directory, branch, email, username, sshKeyPath string) error {
+func executeSync(
+    repoURL string,
+    directory string,
+    email string,
+    username string,
+    sshKeyPath string,
+	remotes map[string]string) error {
 
 	var repo *git.Repository
 	var err error
@@ -49,7 +58,6 @@ func asyncGitOperations(repoURL, directory, branch, email, username, sshKeyPath 
 
 		repo, err = git.PlainClone(directory, false, &git.CloneOptions{
 			URL:           repoURL,
-			ReferenceName: plumbing.NewBranchReferenceName(branch),
 			Auth:          sshKey,
 		})
 		if err != nil {
@@ -68,6 +76,14 @@ func asyncGitOperations(repoURL, directory, branch, email, username, sshKeyPath 
 		return err
 	}
 
+    // _, err = w.Stash(git.StashOptions{
+    //     KeepIndex: true,
+    //     Message:   "Pre-pull stash on " + time.Now().Format(time.RFC1123),
+    // })
+    // if err != nil {
+    //     return fmt.Errorf("could not stash changes: %w", err)
+    // }
+
 	err = w.Pull(&git.PullOptions{
 		RemoteName: "origin",
 		Auth: sshKey,
@@ -76,6 +92,11 @@ func asyncGitOperations(repoURL, directory, branch, email, username, sshKeyPath 
 	if err != nil && err != git.NoErrAlreadyUpToDate {
 		return err
 	}
+
+    // err = w.StashPop(0)
+    // if err != nil {
+    //     return fmt.Errorf("could not pop stash: %w", err)
+    // }
 
 	err = w.AddWithOptions(&git.AddOptions{All: true})
 	if err != nil {

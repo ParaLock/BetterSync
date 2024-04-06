@@ -5,15 +5,21 @@ import (
     // "os"
     // "os/exec"
     // "time"
-    // "github.com/fsnotify/fsnotify"
+    // "github.com/rjeczalik/notify"
     // "gopkg.in/yaml.v2"
     // "io/ioutil"
     // "log"
     // "net"
     // "net/http"
+    
+	"log"
+    "github.com/fsnotify/fsnotify"
+	// "os"
+	// "path/filepath"
 )
 
-import "usync/synchronizers"
+// import "usync/synchronizers"
+// import "usync/monitoring"
 
 type Config struct {
     Syncs []SyncConfig `yaml:"syncs"`
@@ -31,7 +37,7 @@ type SyncConfig struct {
             Interval int `yaml:"interval"`
         } `yaml:"timer"`
     } `yaml:"run_when"`
-    Remotes []string `yaml:"remotes"`
+    Remotes map[string]string `yaml:"remotes"`
     Local  string `yaml:"local"`
 }
 
@@ -80,50 +86,83 @@ type Args struct {
     
 // }
 
+// func callback(event fsnotify.Event) {
+    
+//     fmt.Println("My event")
+//     fmt.Println(event)
+// }   
+
 func main() {
 
-	gitSynchronizer	:= &synchronizers.Git{}
-    gitSynchronizer.Execute()
+    watcher, err := fsnotify.NewWatcher()
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer watcher.Close()
 
+    go func() {
+        for {
+            select {
+            case event, ok := <-watcher.Events:
+                if !ok {
+                    return
+                }
+                if event.Op&fsnotify.Create == fsnotify.Create {
+					fi, err := os.Stat(event.Name)
+					if err == nil && fi.IsDir() {
+						addWatcher(event.Name, watcher)
+					}
+				}
+                log.Println("event:", event)
+     
+            case err, ok := <-watcher.Errors:
+                if !ok {
+                    return
+                }
+                log.Println("error:", err)
+            }
+        }
+    }()
 
+    err = watcher.Add("/home/linuxdev/SyncTest")
+    if err != nil {
+        log.Fatal(err)
+    }
 
-
-
-	// exePath, err := os.Executable()
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// exeDir := filepath.Dir(exePath)
-	// relativePath := "config/settings.json"
-	// absolutePath := filepath.Join(exeDir, relativePath)
-	// fmt.Printf("Absolute path: %s\n", absolutePath)
-
-
-
-
-
-
-    // rcloneSynchronizer  := &synchronizers.RClone{}
-    // var args Args
-    // arg.MustParse(&args)
-    // fmt.Println("Mode:", args.Mode)
-    // fmt.Println("BootstrapMethod:", args.BootstrapMethod)
-    // var args Args
-    // arg.MustParse(&args)
-
-    // fmt.Println(args.mode)
-    // fmt.Println(args.bootstrapMethod)
-
-	// config := loadConfig("config.yaml")
-
-    // for _, sync := range config.Syncs {
-    //     fmt.Printf("Setting up sync: %s\n", sync.Name)
-    // }
-
-    // fmt.Println("Setup complete. Press 'Enter' to exit.")
-    // fmt.Scanln()
+    <-make(chan struct{})
 }
+
+func addWatcher(path string, watcher *fsnotify.Watcher) error {
+	
+    //Skip .git or there will be an infinite loop 
+    if(path.Contains(".git")) {
+        return nil
+    }
+    
+    err := watcher.Add(path)
+	if err != nil {
+		return err
+	}
+	return filepath.Walk(path, func(path string, fi os.FileInfo, err error) error {
+		if fi.IsDir() {
+			return watcher.Add(path)
+		}
+		return nil
+	})
+}
+
+// func main() {
+
+//     c := make(chan notify.EventInfo, 1)
+
+// 	if err := notify.Watch("/home/linuxdev/dev/SyncTest", c, notify.Remove); err != nil {
+// 		fmt.Println(err)
+// 	}
+// 	defer notify.Stop(c)
+
+// 	ei := <-c
+// 	fmt.Println("Got event:", ei)
+// }
 
 // func loadConfig(path string) Config {
 //     var config Config

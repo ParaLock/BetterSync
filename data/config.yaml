@@ -16,9 +16,8 @@ syncs:
     on_failure: exit
     run_when:
       dir_changed:
-        events: all
         debounce_interval: 1
-    remotes:
+    remote:
       origin: "git@github.com:ParaLock/SyncTest.git"
     local: "/home/linuxdev/SyncTest"
     secret: "personal_git_access"

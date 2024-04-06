@@ -2,7 +2,7 @@ package main
 
 import (
     // "io"
-    // "os"
+    "os"
     // "os/exec"
     // "time"
     // "github.com/rjeczalik/notify"
@@ -11,9 +11,10 @@ import (
     // "log"
     // "net"
     // "net/http"
-    
+    "strings"
 	"log"
     "github.com/fsnotify/fsnotify"
+    "path/filepath"
 	// "os"
 	// "path/filepath"
 )
@@ -135,7 +136,7 @@ func main() {
 func addWatcher(path string, watcher *fsnotify.Watcher) error {
 	
     //Skip .git or there will be an infinite loop 
-    if(path.Contains(".git")) {
+    if(strings.Contains(path, ".git")) {
         return nil
     }
     
